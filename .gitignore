@@ -1,0 +1,6 @@
+firmware/mozzyjet_hps/*
+!firmware/mozzyjet_hps/main.c
+interface/noble-mac-master
+interface/node_modules
+interface/useful
+interface/output.csv
