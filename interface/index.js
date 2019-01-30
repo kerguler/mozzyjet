@@ -61,7 +61,6 @@ const term_keypress = (name,matches,data) => {
 	        //
 	        term.moveTo(1,15,'Set opening time (R: random 100-1000 ms): ');
             //
-            term.grabInput(false);
             term.inputField({
                 history: [],
                 autoComplete: [],
