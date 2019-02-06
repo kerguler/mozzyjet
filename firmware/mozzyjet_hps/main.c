@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <msp430.h>
+#include "main.h"
 #include "init.h"
 #include "spi.h"
 #include "mj_uart.h"
@@ -11,29 +12,7 @@
 #include "servo.h"
 #include "pwm.h"
 #include "mystring.h"
-
-#define STATE_PIN         BIT3
-
-#define STATE_TPRES             0
-#define STATE_RUN_5             1
-#define STATE_RUN_10            2
-#define STATE_RUN_20            3
-#define STATE_CALIBFLOW         4
-#define STATE_EMPTY             5
-#define STATE_HOLD              6
-#define STATE_CALIBFLOW_PROCEED 50
-
-uint16_t STATE_SUM = 5;
-
-#define TASK_NONE         0
-#define TASK_SPRAY        1
-#define TASK_OPEN         2
-
-// 35735.0 * cweight:
-#define ALPHA_5   178675.0
-// 62162.0 * cweight:
-#define ALPHA_10  621620.0
-#define ALPHA_20  1243240.0
+#include "flash.h"
 
 extern volatile uint16_t WAITING;
 
@@ -41,9 +20,6 @@ datakey key;
 unsigned char refresh = 0;
 unsigned char initrand = 0;
 
-#define COMM_COMMAND 0
-#define COMM_TIME_L  1
-#define COMM_TIME_R  2
 unsigned char comm_state = COMM_COMMAND;
 
 void state_change(unsigned char news) {
@@ -52,18 +28,17 @@ void state_change(unsigned char news) {
 }
 
 unsigned char check_pwm(uint16_t sw, uint16_t sv) {
-  if (sw > 13000 && sw < 15000) {
-    if (sv > 1750 && sv < 2100)
+  if (sw > (key.lam - 1000) && sw < (key.lam + 1000)) {
+    if (sv > key.pwm1 && sv < 2100)
       return TASK_OPEN;
-    else if (sv > 1250 && sv < 2100)
-      return TASK_SPRAY;
+    else if (sv > key.pwm0 && sv < 2100)
+      return TASK_CLOSE;
+    return TASK_SPRAY;
   }
   return TASK_NONE;
 }
 
 int main(void) {
-  unsigned char state0 = 0;
-  unsigned char counter = 0;
   unsigned char task;
   double alpha = ALPHA_5;
   uint16_t servoms = 500;
@@ -77,7 +52,6 @@ int main(void) {
   MS58_Init(0);
   MJ_UART_Init(&key);
   //
-  SERVO_Init();
   if (CHECK_POSITION)
     SERVO_Close_Check();
   else
@@ -86,112 +60,55 @@ int main(void) {
   P1OUT |= BIT3;
   P1DIR |= BIT3;
   //
-  state_change(STATE_TPRES);
-  // state_change(STATE_CALIBFLOW_PROCEED);
   while (1) {
     P1OUT |= BIT3;
     //
+    MS58_getTempPres_raw(&(key.tt), &(key.pp));
+    key.sp = ADC10_Sample(POSIT_PIN);
+    PWM_Recv(&(key.sw0), &(key.sv0), 0);
+    PWM_Recv(&(key.sw1), &(key.sv1), 1);
+    //
     switch (key.state) {
-      case STATE_EMPTY:
-        break;
-      case STATE_RUN_5:
-      case STATE_RUN_10:
-      case STATE_RUN_20:
-        if (refresh) {
-          switch (key.state) {
-            case STATE_RUN_5: alpha = ALPHA_5; break;
-            case STATE_RUN_10: alpha = ALPHA_10; break;
-            case STATE_RUN_20: alpha = ALPHA_20; break;
-          }
-          refresh = 0;
-        }
-        PWM_Recv(&(key.sw), &(key.sv));
-        task = check_pwm(key.sw, key.sv);
-        switch (task) {
-          default:
-          case TASK_NONE:
-            SERVO_Init();
-            if (CHECK_POSITION)
-              SERVO_Close_Check();
-            else
-              SERVO_Close();
-            break;
-          case TASK_OPEN:
-            SERVO_Init();
-            if (CHECK_POSITION)
-              SERVO_Open_Check();
-            else
-              SERVO_Open();
-            break;
-          case TASK_SPRAY:
-            {
-              static double pres0 = 0;
-              pres0 = (double)(MS58_getPressure_raw());
-              pres0 = sqrt(pres0);
-              pres0 = sqrt(pres0);
-              pres0 = pres0 * pres0 * pres0;
-              // For cweight<10:
-              // servoms = 86.0 + 35735.0 * cweight * pres0^(-3.0/4.0);
-              // For cweight>=10:
-              // servoms = 62162.0 * cweight * pres0^(-3.0/4.0);
-              servoms = (int16_t)(alpha / pres0);
-              if (key.state == STATE_RUN_5)
-                servoms += 86;
-              //
-              SERVO_Init();
-              unsigned char wfull = SERVO_Open_ms(servoms);
-              delay_ms(1000);
-              if (!wfull)
-                state_change(STATE_EMPTY);
-              break;
-            }
-        }
-        break;
-      case STATE_TPRES:
-        MS58_getTempPres_raw(&(key.tt), &(key.pp));
-        key.sp = ADC10_Sample(POSIT_PIN);
-        PWM_Recv(&(key.sw), &(key.sv));
-        break;
-      case STATE_CALIBFLOW:
-        for (counter = 39; counter && (key.state == STATE_CALIBFLOW); counter--) {
-          delay_ms(100);
-        }
-        if (key.state == STATE_CALIBFLOW) {
-          if (!initrand) {
-            int32_t pres = MS58_getTemperature_raw();
-            srand(pres);
-            initrand = 1;
-            //
-            delay_ms(1000);
-          }
-          STATE_SUM = 1000;
-          state0 = STATE_CALIBFLOW_PROCEED;
-          state_change(STATE_CALIBFLOW_PROCEED);
-        }
-        break;
-      //
+      case STATE_RUN_5: alpha = ALPHA_5; break;
+      case STATE_RUN_10: alpha = ALPHA_10; break;
+      case STATE_RUN_20: alpha = ALPHA_20; break;
+    }
+    //
+    task = check_pwm(key.sw0, key.sv0);
+    switch (task) {
       default:
-      //
-      case STATE_CALIBFLOW_PROCEED:
-        if (state0 != key.state) {
-          key.tm = 100 + (uint16_t)(rand() % 900);
+      case TASK_NONE:
+        break;
+      case TASK_CLOSE:
+        if (CHECK_POSITION)
+          SERVO_Close_Check();
+        else
+          SERVO_Close();
+        break;
+      case TASK_OPEN:
+        if (CHECK_POSITION)
+          SERVO_Open_Check();
+        else
+          SERVO_Open();
+        break;
+      case TASK_SPRAY:
+        {
+          static double pres0 = 0;
+          pres0 = (double)(MS58_getPressure_raw());
+          pres0 = sqrt(pres0);
+          pres0 = sqrt(pres0);
+          pres0 = pres0 * pres0 * pres0;
+          // For cweight<10:
+          // servoms = 86.0 + 35735.0 * cweight * pres0^(-3.0/4.0);
+          // For cweight>=10:
+          // servoms = 62162.0 * cweight * pres0^(-3.0/4.0);
+          servoms = (int16_t)(alpha / pres0);
+          if (key.state == STATE_RUN_5)
+            servoms += 86;
           //
-          SERVO_Init();
-          key.p1 = MS58_getPressure_raw();
-          //
-          SERVO_Open_ms(key.tm);
-          delay_ms(3000);
-          //
-          key.p2 = MS58_getPressure_raw();
-          //
-          state0 = key.state;
+          unsigned char wfull = SERVO_Open_ms(servoms);
+          break;
         }
-        delay_ms(500);
-        //
-        break;
-      case STATE_HOLD:
-        delay_ms(500);
-        break;
     }
     //
     P1OUT &= ~BIT3;
@@ -203,15 +120,28 @@ int main(void) {
         case COMM_COMMAND:
           switch (key.comm) {
             case 'O':
-              SERVO_Init();
               if (CHECK_POSITION) SERVO_Open_Check(); else SERVO_Open();
               break;
             case 'C':
-              SERVO_Init();
               if (CHECK_POSITION) SERVO_Close_Check(); else  SERVO_Close();
               break;
             case 'T':
               comm_state = COMM_TIME_L;
+              break;
+            case 'V':
+              comm_state = COMM_VOL0_L;
+              break;
+            case 'S':
+              comm_state = COMM_SPV_L;
+              break;
+            case 'L':
+              comm_state = COMM_LAM_L;
+              break;
+            case '<':
+              comm_state = COMM_PWM0_L;
+              break;
+            case '>':
+              comm_state = COMM_PWM1_L;
               break;
           }
           break;
@@ -222,13 +152,61 @@ int main(void) {
         case COMM_TIME_R:
           key.tm = (key.tm << 8) | key.comm;
           //
-          SERVO_Init();
           key.p1 = MS58_getPressure_raw();
           //
           SERVO_Open_ms(key.tm);
-          delay_ms(3000);
           //
           key.p2 = MS58_getPressure_raw();
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_VOL0_L:
+          key.v0 = key.comm;
+          comm_state = COMM_VOL0_R;
+          break;
+        case COMM_VOL0_R:
+          key.v0 = (key.v0 << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_SPV_L:
+          key.spv = key.comm;
+          comm_state = COMM_SPV_R;
+          break;
+        case COMM_SPV_R:
+          key.spv = (key.spv << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_LAM_L:
+          key.lam = key.comm;
+          comm_state = COMM_LAM_R;
+          break;
+        case COMM_LAM_R:
+          key.lam = (key.lam << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_PWM0_L:
+          key.pwm0 = key.comm;
+          comm_state = COMM_PWM0_R;
+          break;
+        case COMM_PWM0_R:
+          key.pwm0 = (key.pwm0 << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_PWM1_L:
+          key.pwm1 = key.comm;
+          comm_state = COMM_PWM1_R;
+          break;
+        case COMM_PWM1_R:
+          key.pwm1 = (key.pwm1 << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
           //
           comm_state = COMM_COMMAND;
           break;

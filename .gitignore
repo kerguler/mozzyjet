@@ -1,5 +1,6 @@
 firmware/mozzyjet_hps/*
 !firmware/mozzyjet_hps/main.c
+!firmware/mozzyjet_hps/main.h
 interface/noble-mac-master
 interface/node_modules
 interface/useful

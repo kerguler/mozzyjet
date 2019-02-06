@@ -14,6 +14,9 @@ var calib = '';
 var calib0 = '';
 var logdata = true;
 
+var logline = 18;
+var cmdline = 19;
+
 var TERM = {
     READ_COMMAND: 1,
     READ_DATA: 2
@@ -27,6 +30,43 @@ const randomInt = (min,max) => {
     min = Math.floor(min);
     max = Math.floor(max);
     return Math.floor(min + Math.random() * (max-min));
+};
+
+const getInstruction = (id,title) => {
+	logdata = false;
+    term_state = TERM.READ_DATA;
+	//
+	term.moveTo(1,cmdline,title);
+    //
+    term.inputField({
+        history: [],
+        autoComplete: [],
+        autoCompleteMenu: false
+    }, function(error,input) {
+        if (error) {
+            logCommands(`Unexpected input: ${input}`);
+        } else {
+            var okay = false;
+            var num = parseInt(input);
+            if (isNaN(num))
+                logCommands(`Unexpected input: ${input}`);
+            else
+                okay = true;
+            if (okay) {
+                logCommands(`Command successful`);
+                var buf = Buffer.allocUnsafe(2);
+                buf.writeInt16BE(num, 0);
+	            command.push(Buffer.alloc(1,id));
+                command.push(buf);
+            }
+	    }
+	    logdata = true;
+        term_state = TERM.READ_COMMAND;
+        setTimeout(function() {
+            term_keypress(0,0,0);
+        }, 1);
+	}
+                   );
 };
 
 const term_keypress = (name,matches,data) => {
@@ -59,7 +99,7 @@ const term_keypress = (name,matches,data) => {
 	        logdata = false;
             term_state = TERM.READ_DATA;
 	        //
-	        term.moveTo(1,15,'Set opening time (R: random 100-1000 ms): ');
+	        term.moveTo(1,cmdline,'Set opening time (R: random 100-1000 ms): ');
             //
             term.inputField({
                 history: [],
@@ -97,18 +137,30 @@ const term_keypress = (name,matches,data) => {
 	        }
                            );
 	        break;
+	    case 'v':
+	    case 'V':
+            getInstruction('V','Set initial volume: ');
+	        break;
+	    case 's':
+	    case 'S':
+            getInstruction('S','Set spray volume: ');
+            break;
+	    case 'l':
+	    case 'L':
+            getInstruction('L','Set PWM lambda: ');
+            break;
+	    case '<':
+            getInstruction('<','Set PWM 0 thr. L: ');
+            break;
+	    case '>':
+            getInstruction('>','Set PWM 0 thr. R: ');
+            break;
 	    default:
 	        break;
 	    }
 	    break;
     default:
         break;
-    }
-    //
-    if (command.length > 0) {
-        c = command.shift();
-        //
-        sendCommand(c);
     }
 };
 
@@ -125,8 +177,12 @@ const init = () => {
     //
     term.moveTo(1,11);
     term.blue.bold("Serial communication initiated!\n");
-    term.yellow("Initial data transfer: [    ]\n");
-    term.gray("[R: renew connection, O: open valve, C: close valve, T: run test]\n\n");
+    term.gray("R: renew connection\n");
+    term.gray("O: open valve           C: close valve\n");
+    term.gray("T: run test             \n");
+    term.gray("V: set initial volume   S: set spray volume\n");
+    term.gray("L: set PWM lambda       \n");
+    term.gray("<: set PWM 0 thr. L     >: set PWM 0 thr. R\n\n");
     //
     crack.reset();
     term_state = TERM.READ_COMMAND;
@@ -142,28 +198,38 @@ const init = () => {
 }
 
 const logCommands = (message) => {
-    term.moveTo(1,14).gray(message+"\n");
+    term.moveTo(1,logline).gray(message+"\n");
 };
 
 crack.events.on('mj-log', function (data) {
     if (!logdata) return;
     //
-    term.moveTo(50,1,"State: %d          ",data.state);
-    term.moveTo(50,2,"Temp: %d          ",data.tt);
-    term.moveTo(50,3,"Pres: %d          ",data.pp);
-    term.moveTo(50,4,"ServoPos: %d          ",data.sp);
-    term.moveTo(50,5,"PWM width: %d          ",data.sw);
-    term.moveTo(50,6,"PWM signal: %d          ",data.sv);
-    term.moveTo(50,7,"Calib. time: %d          ",data.tm);
-    term.moveTo(50,8,"Calib. pres before: %d          ",data.p1);
-    term.moveTo(50,9,"Calib. pres after: %d          ",data.p2);
-    term.moveTo(50,10,"Received command: %d          ",data.comm);
-    term.moveTo(1,15);
+    term.moveTo(50,1, "State: %d   ",data.state);
+    term.moveTo(50,2, "Temp: %d   ",data.tt);
+    term.moveTo(50,3, "Pres: %d   ",data.pp);
+    term.moveTo(50,4, "ServoPos: %d   ",data.sp);
+    term.moveTo(50,5, "PWM [%d: %d - %d]   ",data.lam,data.pwm0,data.pwm1)
+    term.moveTo(50,6, "   w0: %d   s0: %d   ",data.sw0,data.sv0);
+    term.moveTo(50,7, "   w1: %d   s1: %d   ",data.sw1,data.sv1);
+    term.moveTo(50,8, "Calibration");
+    term.moveTo(50,9, "   Duration: %d   ",data.tm);
+    term.moveTo(50,10,"   Pressure before: %d   ",data.p1);
+    term.moveTo(50,11,"   Pressure after: %d   ",data.p2);
+    term.moveTo(50,12,"Initial volume: %d   ",data.v0);
+    term.moveTo(50,13,"Spray volume: %d   ",data.spv);
+    term.moveTo(50,14,"Received command: %d   ",data.comm);
+    term.moveTo(1,cmdline);
     //
     calib = `${data.tm},${data.p1},${data.p2}`;
     if (calib != calib0) {
         logfile.write(calib+"\n");
         calib0 = calib;
+    }
+    //
+    if (command.length > 0) {
+        c = command.shift();
+        //
+        sendCommand(c);
     }
 });
 
@@ -220,9 +286,9 @@ const setupBluetooth = () => {
                             console.error('Error subscribing to characteristic');
                         } else {
                             console.log('Subscribed for characteristic notifications');
+                            init();
                         }
                     });
-                    init();
                 }
             );
             //

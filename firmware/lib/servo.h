@@ -10,19 +10,14 @@
 
 #define LAMBDA (20000-1)
 
-#define SERVO_Release     PWM_Send_ABS(LAMBDA+1)
-
 /*
  * Cap design: Glue
  */
-#define PWM_OPEN  1300
-#define PWM_HALF  1745
-#define PWM_CLOSE 2190
+#define PWM_OPEN  1400
+#define PWM_CLOSE 2180
 
 #define ADC_CLOSE 690
-#define ADC_OPEN  440
-
-void SERVO_Calibrate(void);
+#define ADC_OPEN  470
 
 void SERVO_Init(void);
 void SERVO_Open(void);
