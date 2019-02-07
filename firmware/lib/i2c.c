@@ -121,13 +121,13 @@ void I2C_Init(char address) {
     P1SEL2 |= I2C_SCLK_PIN + I2C_SDA_PIN;
 
     UCB0CTL1 |= UCSWRST;
-    UCB0CTL0 |= UCMODE_3 | UCMST | UCSYNC;
+    UCB0CTL0 |= UCMODE_0 | UCMST | UCSYNC;
     UCB0CTL1 |= UCSSEL_2; // SMCLK
     /**
      * Configure the baud rate registers for 100kHz when sourcing from SMCLK
      * where SMCLK = 1MHz
      */
-    UCB0BR0 = 10;
+    UCB0BR0 = 12;
     UCB0BR1 = 0;
 
     UCB0CTL1 &= ~UCSWRST; // clear SW
