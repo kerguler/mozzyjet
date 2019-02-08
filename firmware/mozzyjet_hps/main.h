@@ -3,20 +3,12 @@
 
 #define STATE_PIN         BIT3
 
-#define STATE_RUN_5       1
-#define STATE_RUN_10      2
-#define STATE_RUN_20      3
+#define CONTAINER_VOLMAX  1000
 
 #define TASK_NONE         0
 #define TASK_SPRAY        1
 #define TASK_OPEN         2
 #define TASK_CLOSE        3
-
-// 35735.0 * cweight:
-#define ALPHA_5           178675.0
-// 62162.0 * cweight:
-#define ALPHA_10          621620.0
-#define ALPHA_20          1243240.0
 
 #define COMM_COMMAND      0
 #define COMM_TIME_L       1

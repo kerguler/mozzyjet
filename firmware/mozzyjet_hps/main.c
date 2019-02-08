@@ -38,10 +38,54 @@ unsigned char check_pwm(uint16_t sw, uint16_t sv) {
   return TASK_NONE;
 }
 
+void servo_open_pres() {
+  key.p1 = MS58_getPressure_raw();
+  //
+  SERVO_Open_ms(key.tm);
+  delay_ms(1000);
+  //
+  key.p2 = MS58_getPressure_raw();
+}
+
+void calculate_spray_value() {
+  if (key.sv1 < 1100 || key.sv1 > 1900) return;
+  //
+  // Set spray volume temporarily
+  key.spv = (key.sv1 - 1100) >> 5;
+}
+
+unsigned char spray_and_check() {
+  static uint16_t tmp = 0;
+  static double pres0 = 0;
+  //
+  key.p1 = MS58_getPressure_raw();
+  // Calculate pres^(3/4)
+  pres0 = (double)(key.p1);
+  pres0 = sqrt(pres0);
+  pres0 = sqrt(pres0);
+  pres0 = pres0 * pres0 * pres0;
+  //
+  if (key.spv < 10)
+    key.tm = 86 + (uint16_t)(35735.0 * (double)(key.spv) / pres0);
+  else
+    key.tm = (uint16_t)(62162.0 * (double)(key.spv) / pres0);
+  //
+  SERVO_Open_ms(key.tm);
+  delay_ms(1000);
+  //
+  key.p2 = MS58_getPressure_raw();
+  //
+  // Calculate volume reduction
+  if (key.p2 < key.p1) {
+    tmp = (uint16_t)((double)(CONTAINER_VOLMAX-key.v0)*((double)(key.p1)/(double)(key.p2)-1.0));
+    key.v0 = (tmp > key.v0) ? 0 : key.v0 - tmp;
+  }
+  //
+  return 1;
+}
+
 int main(void) {
   unsigned char task;
-  double alpha = ALPHA_5;
-  uint16_t servoms = 500;
 
   setup_timers(0);
 
@@ -68,11 +112,9 @@ int main(void) {
     PWM_Recv(&(key.sw0), &(key.sv0), 0);
     PWM_Recv(&(key.sw1), &(key.sv1), 1);
     //
-    switch (key.state) {
-      case STATE_RUN_5: alpha = ALPHA_5; break;
-      case STATE_RUN_10: alpha = ALPHA_10; break;
-      case STATE_RUN_20: alpha = ALPHA_20; break;
-    }
+    task = check_pwm(key.sw1, key.sv1);
+    if (task != TASK_NONE)
+      calculate_spray_value();
     //
     task = check_pwm(key.sw0, key.sv0);
     switch (task) {
@@ -92,23 +134,8 @@ int main(void) {
           SERVO_Open();
         break;
       case TASK_SPRAY:
-        {
-          static double pres0 = 0;
-          pres0 = (double)(MS58_getPressure_raw());
-          pres0 = sqrt(pres0);
-          pres0 = sqrt(pres0);
-          pres0 = pres0 * pres0 * pres0;
-          // For cweight<10:
-          // servoms = 86.0 + 35735.0 * cweight * pres0^(-3.0/4.0);
-          // For cweight>=10:
-          // servoms = 62162.0 * cweight * pres0^(-3.0/4.0);
-          servoms = (int16_t)(alpha / pres0);
-          if (key.state == STATE_RUN_5)
-            servoms += 86;
-          //
-          unsigned char wfull = SERVO_Open_ms(servoms);
-          break;
-        }
+        spray_and_check();
+        break;
     }
     //
     P1OUT &= ~BIT3;
@@ -119,6 +146,9 @@ int main(void) {
       switch (comm_state) {
         case COMM_COMMAND:
           switch (key.comm) {
+            case 'R':
+              spray_and_check();
+              break;
             case 'O':
               if (CHECK_POSITION) SERVO_Open_Check(); else SERVO_Open();
               break;
@@ -152,11 +182,7 @@ int main(void) {
         case COMM_TIME_R:
           key.tm = (key.tm << 8) | key.comm;
           //
-          key.p1 = MS58_getPressure_raw();
-          //
-          SERVO_Open_ms(key.tm);
-          //
-          key.p2 = MS58_getPressure_raw();
+          servo_open_pres();
           //
           comm_state = COMM_COMMAND;
           break;

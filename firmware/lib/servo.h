@@ -21,7 +21,7 @@
 
 void SERVO_Init(void);
 void SERVO_Open(void);
-unsigned char SERVO_Open_ms(uint16_t ms);
+void SERVO_Open_ms(uint16_t ms);
 void SERVO_Open_Check(void);
 void SERVO_Close(void);
 void SERVO_Close_Check(void);

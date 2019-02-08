@@ -46,8 +46,7 @@ void SERVO_Open_Check() {
     }
 }
 
-unsigned char SERVO_Open_ms(uint16_t ms) {
-    unsigned char retval = 1;
+void SERVO_Open_ms(uint16_t ms) {
     uint16_t adc = 0;
     SERVO_Init();
     //
@@ -65,6 +64,4 @@ unsigned char SERVO_Open_ms(uint16_t ms) {
     //
     PWM_Send_ABS(PWM_SIGNAL=PWM_CLOSE);
     delay_ms(1000);
-    //
-    return retval;
 }
