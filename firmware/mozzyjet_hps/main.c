@@ -65,10 +65,10 @@ unsigned char spray_and_check() {
   pres0 = sqrt(pres0);
   pres0 = pres0 * pres0 * pres0;
   //
-  if (key.spv < 10)
-    key.tm = 86 + (uint16_t)(35735.0 * (double)(key.spv) / pres0);
+  if (key.spv < ((double)(key.p1)/1e4))
+    key.tm = (uint16_t)(92.62 + (64917.90 * (double)(key.spv) / pres0));
   else
-    key.tm = (uint16_t)(62162.0 * (double)(key.spv) / pres0);
+    key.tm = (uint16_t)(-24.45 + (150010.63 * (double)(key.spv) / pres0));
   //
   SERVO_Open_ms(key.tm);
   delay_ms(1000);
