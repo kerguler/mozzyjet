@@ -31,12 +31,11 @@ void setup_timers(unsigned char fast) {
   //
   __bis_SR_register(GIE);
 }
-/*
-void delay_ms(uint16_t ms) {
-    for (;ms;ms--)
-        __delay_cycles(1000);
+
+char isWaiting() {
+    return (char)(WAITING);
 }
-*/
+
 
 void delay_ms(uint16_t ms) {
     WAITING = 0;
@@ -61,24 +60,62 @@ void delay_ms_nohold(uint16_t ms) {
                                        // 1 MHz / 8 / 125 = 1 mHz
 }
 
-char isWaiting() {
-    return (char)(WAITING);
-}
-
 // Timer A0 interrupt service routine
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer_A (void)
 {
-    if (WAITING) {
+  if (WAITING) {
         TA0CCR0 = DELAY_TIME;
         if (WAITING-- == 0) {
             TA0CCTL0 &= ~CCIE;
             TA0CTL = TACLR;
         }
-    }
-    __bic_SR_register_on_exit(CPUOFF);
+  }
+  __bic_SR_register_on_exit(CPUOFF);
 }
 
+/*
+void delay_ms(uint16_t ms) {
+    WAITING = 0;
+    TA1CCTL0 = CCIE;                   // CCR0 interrupt enabled
+    TA1CTL = TASSEL_2 | MC_1 | ID_3;   // SMCLK/8 upto CCR0
+    for (;ms;ms--) {
+        TA1CCR0 = DELAY_TIME;          // max = 2^16 = 65536
+                                       // SMCLK/8/TA0CRR0
+                                       // 1 MHz / 8 / 125 = 1 mHz
+        __bis_SR_register(CPUOFF);
+    }
+    TA1CCTL0 &= ~CCIE;
+    TA1CTL = TACLR;
+}
+
+void delay_ms_nohold(uint16_t ms) {
+    WAITING = ms;
+    TA1CCTL0 = CCIE;                   // CCR0 interrupt enabled
+    TA1CTL = TASSEL_2 | MC_1 | ID_3;   // SMCLK/8 upto CCR0
+    TA1CCR0 = DELAY_TIME;              // max = 2^16 = 65536
+                                       // SMCLK/8/TA0CRR0
+                                       // 1 MHz / 8 / 125 = 1 mHz
+}
+
+#pragma vector = TIMER1_A0_VECTOR
+__interrupt void Timer1_A0_Interrupt(void)
+{
+  if (WAITING) {
+        TA1CCR0 = DELAY_TIME;
+        if (WAITING-- == 0) {
+            TA1CCTL0 &= ~CCIE;
+            TA1CTL = TACLR;
+        }
+  }
+  if (TA1CTL & TAIFG) {
+    TA1CTL &= ~TAIFG; // Clear interrupt flag - handled
+  }
+  if (TA1CCTL0 & CCIFG)
+    TA1CCTL0 &= ~CCIFG;
+  __bic_SR_register_on_exit(CPUOFF);
+}
+*/
 #pragma vector=USCIAB0TX_VECTOR
 __interrupt void USCI0TX_ISR(void)
 {
@@ -130,4 +167,3 @@ __interrupt void USCI0RX_ISR(void)
   }
   __bic_SR_register_on_exit(CPUOFF);
 }
-

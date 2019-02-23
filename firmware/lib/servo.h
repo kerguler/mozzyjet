@@ -2,7 +2,7 @@
 #define SERVO_H_
 
 #define CHECK_WATER       0
-#define CHECK_POSITION    1
+#define CHECK_POSITION    0
 
 #define POSIT_PIN         BIT0
 

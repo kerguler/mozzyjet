@@ -85,7 +85,9 @@ unsigned char spray_and_check() {
 }
 
 int main(void) {
-  unsigned char task;
+  unsigned char task = TASK_CLOSE;
+  static unsigned char task0;
+  task0 = task;
 
   setup_timers(0);
 
@@ -108,7 +110,7 @@ int main(void) {
     P1OUT |= BIT3;
     //
     MS58_getTempPres_raw(&(key.tt), &(key.pp));
-    key.sp = ADC10_Sample(POSIT_PIN);
+    key.sp = CHECK_POSITION ? ADC10_Sample(POSIT_PIN) : 0;
     PWM_Recv(&(key.sw0), &(key.sv0), 0);
     PWM_Recv(&(key.sw1), &(key.sv1), 1);
     //
@@ -122,21 +124,26 @@ int main(void) {
       case TASK_NONE:
         break;
       case TASK_CLOSE:
-        if (CHECK_POSITION)
-          SERVO_Close_Check();
-        else
-          SERVO_Close();
+        if (task0 != TASK_CLOSE) {
+          if (CHECK_POSITION)
+            SERVO_Close_Check();
+          else
+            SERVO_Close();
+        }
         break;
       case TASK_OPEN:
-        if (CHECK_POSITION)
-          SERVO_Open_Check();
-        else
-          SERVO_Open();
+        if (task0 != TASK_OPEN) {
+          if (CHECK_POSITION)
+            SERVO_Open_Check();
+          else
+            SERVO_Open();
+        }
         break;
       case TASK_SPRAY:
         spray_and_check();
         break;
     }
+    task0 = task;
     //
     P1OUT &= ~BIT3;
     //

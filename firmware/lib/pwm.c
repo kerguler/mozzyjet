@@ -10,7 +10,8 @@ void PWM_Send_Init(uint16_t lambda) {
   P2SEL |= PWM_SEND_PIN; // Select p2.1 for PWM
   //
   TA1CCTL1 = OUTMOD_7;
-  TA1CTL = TASSEL_2 + MC_1 + ID_0; // 1000000 / 1 / lambda Hz (per second)
+  TA1CTL   = TASSEL_2 | MC_1 | ID_0; // 1000000 / 1 / lambda Hz (per second)
+  //
   TA1CCR0 = lambda;
   TA1CCR1 = 0; // Off
 }
@@ -59,23 +60,24 @@ __interrupt void Timer1_A1_Interrupt(void)
 }
 
 void PWM_Recv_Init(unsigned char pin) {
-  P2DIR &= ~PWM_SEND_PIN;
+  P2DIR |= PWM_SEND_PIN;
   P2SEL &= ~PWM_SEND_PIN; // Unselect p2.1 for PWM
+  P2OUT &= ~PWM_SEND_PIN;
   //
   // Timer 1: PWM signal detection
   switch (pin) {
     default:
     case 0:
-      TA1CCTL0 = CCIE | CM_3 | CCIS_0 | CAP;     // Capture mode, both edges, input 0 (CCI0A, P2.0)
-      TA1CTL   = TASSEL_2 | MC_2 | ID_0 | TAIE;         // SMCLK continuous up, interrupt enabled
+      TA1CCTL0 = CCIE | CM_3 | CCIS_0 | CAP;    // Capture mode, both edges, input 0 (CCI0A, P2.0)
+      TA1CTL   = TASSEL_2 | MC_2 | ID_0 | TAIE; // SMCLK continuous up, interrupt enabled
       //
       P2DIR  &= ~PWM_RECV_PIN0;
       P2SEL  |=  PWM_RECV_PIN0; // Select pin 2.0 as input interrupt
       P2SEL2 &= ~PWM_RECV_PIN0; // Select pin 2.0 as input interrupt
       break;
     case 1:
-      TA1CCTL0 = CCIE | CM_3 | CCIS_1 | CAP;     // Capture mode, both edges, input 1 (CCI0B, P2.3)
-      TA1CTL   = TASSEL_2 | MC_2 | ID_0 | TAIE;         // SMCLK continuous up, interrupt enabled
+      TA1CCTL0 = CCIE | CM_3 | CCIS_1 | CAP;    // Capture mode, both edges, input 1 (CCI0B, P2.3)
+      TA1CTL   = TASSEL_2 | MC_2 | ID_0 | TAIE; // SMCLK continuous up, interrupt enabled
       //
       P2DIR  &= ~PWM_RECV_PIN3;
       P2SEL  |=  PWM_RECV_PIN3; // Select pin 2.3 as input interrupt
