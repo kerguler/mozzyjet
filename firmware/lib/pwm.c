@@ -62,7 +62,7 @@ __interrupt void Timer1_A1_Interrupt(void)
 void PWM_Recv_Init(unsigned char pin) {
   P2DIR |= PWM_SEND_PIN;
   P2SEL &= ~PWM_SEND_PIN; // Unselect p2.1 for PWM
-  P2OUT &= ~PWM_SEND_PIN;
+  P2OUT |= PWM_SEND_PIN;
   //
   // Timer 1: PWM signal detection
   switch (pin) {

@@ -14,7 +14,8 @@
  * Cap design: Glue
  */
 #define PWM_OPEN  1400
-#define PWM_CLOSE 2180
+// #define PWM_CLOSE 2180
+#define PWM_CLOSE 2220
 
 #define ADC_CLOSE 690
 #define ADC_OPEN  470
