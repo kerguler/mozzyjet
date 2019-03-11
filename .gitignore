@@ -1,3 +1,5 @@
+.idea
+firmware/.idea
 firmware/mozzyjet_hps/*
 !firmware/mozzyjet_hps/main.c
 !firmware/mozzyjet_hps/main.h
