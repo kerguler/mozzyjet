@@ -21,13 +21,13 @@ Pin configuration for [MSP430G2553](http://www.ti.com/product/MSP430G2553)
 ```bash
           |  VCC [      ] GND  |
 Servo pos |  1.0 [      ] XIN  |
-UART_RXD  |  1.1 [      ] XOUT |
-UART_TXD  |  1.2 [      ] TEST |
-          |  1.3 [      ] RST  |
-MS58_SCE  |  1.4 [      ] 1.7  | SSI_SIMO
-SSI_SCLK  |  1.5 [      ] 1.6  | SSI_SOMI
-PWM recv  |  2.0 [      ] 2.5  |
-PWM send  |  2.1 [      ] 2.4  |
+ UART_RXD |  1.1 [      ] XOUT |
+ UART_TXD |  1.2 [      ] TEST |
+      LED |  1.3 [      ] RST  |
+ MS58_SCE |  1.4 [      ] 1.7  | SSI_SIMO
+ SSI_SCLK |  1.5 [      ] 1.6  | SSI_SOMI
+ PWM recv |  2.0 [      ] 2.5  |
+ PWM send |  2.1 [      ] 2.4  |
           |  2.2 [      ] 2.3  | PWM recv
 ```
 
