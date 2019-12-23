@@ -15,6 +15,8 @@ void MJ_UART_Init_Key(datakey *data) {
     data->tt    = 0;
     data->pp    = 0;
     data->sp    = 0;
+    data->spO   = 0;
+    data->spC   = 0;
     data->sw0   = 0;
     data->sv0   = 0;
     data->sw1   = 0;
@@ -29,11 +31,13 @@ void MJ_UART_Init_Key(datakey *data) {
     data->spv   = 0;
     data->comm  = 0;
     //
-    flash_read(&(data->lam),0,1);  // 14000
-    flash_read(&(data->pwm0),1,1); //  1250
-    flash_read(&(data->pwm1),2,1); //  1750
-    flash_read(&(data->v0),3,1);   //   300
-    flash_read(&(data->spv),4,1);  //     5
+    flash_read(&(data->spO),0,1);  //  1400
+    flash_read(&(data->spC),1,1);  //  2250
+    flash_read(&(data->lam),2,1);  // 14000
+    flash_read(&(data->pwm0),3,1); //  1250
+    flash_read(&(data->pwm1),4,1); //  1750
+    flash_read(&(data->v0),5,1);   //   300
+    flash_read(&(data->spv),6,1);  //     5
 }
 
 void MJ_UART_Transfer_RxTx(char *out, unsigned char size) {
@@ -44,15 +48,17 @@ void MJ_UART_Transfer_RxTx(char *out, unsigned char size) {
 }
 
 void MJ_UART_Write_Key(datakey *data) {
-    static uint16_t buf[5];
+    static uint16_t buf[7];
     //
-    buf[0] = (uint16_t)(data->lam);
-    buf[1] = (uint16_t)(data->pwm0);
-    buf[2] = (uint16_t)(data->pwm1);
-    buf[3] = (uint16_t)(data->v0);
-    buf[4] = (uint16_t)(data->spv);
+    buf[0] = (uint16_t)(data->spO);
+    buf[1] = (uint16_t)(data->spC);
+    buf[2] = (uint16_t)(data->lam);
+    buf[3] = (uint16_t)(data->pwm0);
+    buf[4] = (uint16_t)(data->pwm1);
+    buf[5] = (uint16_t)(data->v0);
+    buf[6] = (uint16_t)(data->spv);
     //
-    flash_write(buf,0,5);
+    flash_write(buf,0,7);
 }
 
 unsigned char MJ_UART_Read_Command(datakey *data) {
@@ -74,6 +80,8 @@ void MJ_UART_Transfer_Key(datakey *data) {
     MJ_UART_Transfer_RxTx((char *)(&(data->tt)),   4);
     MJ_UART_Transfer_RxTx((char *)(&(data->pp)),   4);
     MJ_UART_Transfer_RxTx((char *)(&(data->sp)),   2);
+    MJ_UART_Transfer_RxTx((char *)(&(data->spO)),  2);
+    MJ_UART_Transfer_RxTx((char *)(&(data->spC)),  2);
     MJ_UART_Transfer_RxTx((char *)(&(data->sw0)),  2);
     MJ_UART_Transfer_RxTx((char *)(&(data->sv0)),  2);
     MJ_UART_Transfer_RxTx((char *)(&(data->sw1)),  2);

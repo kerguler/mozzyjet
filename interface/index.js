@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-var bluetooth = true;
+var bluetooth = false;
+var diagnose = false;
 var handle = null;
 
 var term = require( 'terminal-kit' ).terminal;
@@ -16,8 +17,8 @@ var calib = '';
 var calib0 = '';
 var logdata = true;
 
-var logline = 18;
-var cmdline = 19;
+var logline = 19;
+var cmdline = 20;
 
 var TERM = {
     READ_COMMAND: 1,
@@ -157,6 +158,14 @@ const term_keypress = (name,matches,data) => {
 	    case '>':
             getInstruction('>','Set PWM 0 thr. R: ');
             break;
+	    case 'n':
+	    case 'N':
+            getInstruction('N','Set PWM servo O: ');
+            break;
+	    case 'm':
+	    case 'M':
+            getInstruction('M','Set PWM servo C: ');
+            break;
 	    default:
 	        break;
 	    }
@@ -183,7 +192,8 @@ const init = () => {
     term.gray("T: run test             R: spray\n");
     term.gray("V: set container volume S: set spray volume\n");
     term.gray("L: set PWM lambda       \n");
-    term.gray("<: set PWM 0 thr. L     >: set PWM 0 thr. R\n\n");
+    term.gray("<: set PWM 0 thr. L     >: set PWM 0 thr. R\n");
+    term.gray("N: set PWM servo O      M: set PWM servo C\n\n");
     //
     crack.reset();
     term_state = TERM.READ_COMMAND;
@@ -209,7 +219,7 @@ crack.events.on('mj-log', function (data) {
     term.moveTo(50,1, "State: %d   ",data.state).eraseLineAfter();
     term.moveTo(50,2, "Temp: %d   ",data.tt).eraseLineAfter();
     term.moveTo(50,3, "Pres: %d   ",data.pp).eraseLineAfter();
-    term.moveTo(50,4, "ServoPos: %d   ",data.sp).eraseLineAfter();
+    term.moveTo(50,4, "ServoPos: [%d: %d - %d]   ",data.sp,data.spO,data.spC).eraseLineAfter();
     term.moveTo(50,5, "PWM [%d: %d - %d]   ",data.lam,data.pwm0,data.pwm1).eraseLineAfter();
     term.moveTo(50,6, "   w0: %d   s0: %d   ",data.sw0,data.sv0).eraseLineAfter();
     term.moveTo(50,7, "   w1: %d   s1: %d   ",data.sw1,data.sv1).eraseLineAfter();
@@ -258,7 +268,8 @@ const connectSerialPort = () => {
 
 const setupBluetooth = () => {
     var noble = require('./noble-mac-master');
-    var peripheralIdOrAddress = '58ee3bc354e844dea7a084c930710ece';
+    // var peripheralIdOrAddress = '58ee3bc354e844dea7a084c930710ece';
+    var peripheralIdOrAddress = '8cbb8c069eb845de9c757340588cde73';
     //
     noble.on('stateChange', function(state) {
         if (state === 'poweredOn') {
@@ -278,10 +289,13 @@ const setupBluetooth = () => {
             console.log('Connected to', peripheral.id);
             //
             peripheral.discoverSomeServicesAndCharacteristics(
-                ['FFE0'], // serviceUUIDs,
-                ['FFE1'], // characteristicUUIDs,
+                ['1811'], // serviceUUIDs,
+                ['2a46'], // characteristicUUIDs,
+                // ['FFE0'], // serviceUUIDs,
+                // ['FFE1'], // characteristicUUIDs,
                 function (error, services, characteristics) {
                     console.log('Discovered services and characteristics');
+                    //
                     handle = characteristics[0];
                     handle.subscribe(error => {
                         if (error) {
@@ -301,6 +315,50 @@ const setupBluetooth = () => {
     //
 };
 
+const diagnoseBluetooth = () => {
+    var noble = require('./noble-mac-master');
+    // var peripheralIdOrAddress = '58ee3bc354e844dea7a084c930710ece';
+    var peripheralIdOrAddress = '8cbb8c069eb845de9c757340588cde73';
+    //
+    noble.on('stateChange', function(state) {
+        if (state === 'poweredOn') {
+            noble.startScanning();
+        } else {
+            noble.stopScanning();
+        }
+    });
+    //
+    noble.on('discover', function(peripheral) {
+        console.log('Scanning:' + peripheral.id);
+        if (peripheral.id !== peripheralIdOrAddress) return;
+        noble.stopScanning();
+        //
+        console.log('Peripheral with ID ' + peripheral.id + ' found');
+        //
+        peripheral.connect(error => {
+            console.log('Connected to', peripheral.id);
+            console.dir(peripheral);
+            peripheral.discoverServices(null, function(error, services) {
+                console.log('discovered the following services:');
+                var i;
+                for (i in services) {
+                    console.log('  ' + i + ' uuid: ' + services[i].uuid);
+                    services[i].discoverCharacteristics(null, function(error, characteristics) {
+                        console.log('discovered the following characteristics:');
+                        var j;
+                        for (j in characteristics) {
+                            console.log(' service: ' + services[i].uuid + ' uuid: ' + characteristics[j].uuid + ' name: ' + characteristics[j].name + ' type: ' + characteristics[j].type + ' properties: ' + characteristics[j].properties);
+                        }
+                    });
+                }
+            });
+        });
+        //
+        peripheral.on('disconnect', () => console.log('disconnected'));
+    });
+    //
+};
+
 const sendCommand = (command) => {
     if (bluetooth)
         handle.write(command,true);
@@ -309,9 +367,12 @@ const sendCommand = (command) => {
 };
 
 const run = async () => {
-    if (bluetooth)
-        setupBluetooth();
-    else
+    if (bluetooth) {
+        if (diagnose)
+            diagnoseBluetooth();
+        else
+            setupBluetooth();
+    } else
         connectSerialPort();
 }
 

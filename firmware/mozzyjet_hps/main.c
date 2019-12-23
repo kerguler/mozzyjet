@@ -98,6 +98,10 @@ int main(void) {
   MS58_Init(0);
   MJ_UART_Init(&key);
   //
+  // Set servo parameters
+  SERVO_Set_Open(key.spO);
+  SERVO_Set_Close(key.spC);
+  //
   if (CHECK_POSITION)
     SERVO_Close_Check();
   else
@@ -180,6 +184,12 @@ int main(void) {
             case '>':
               comm_state = COMM_PWM1_L;
               break;
+            case 'N':
+              comm_state = COMM_SP_O_L;
+              break;
+            case 'M':
+              comm_state = COMM_SP_C_L;
+              break;
           }
           break;
         case COMM_TIME_L:
@@ -240,6 +250,30 @@ int main(void) {
         case COMM_PWM1_R:
           key.pwm1 = (key.pwm1 << 8) | key.comm;
           MJ_UART_Write_Key(&key);
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_SP_O_L:
+          key.spO = key.comm;
+          comm_state = COMM_SP_O_R;
+          break;
+        case COMM_SP_O_R:
+          key.spO = (key.spO << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
+          //
+          SERVO_Set_Open(key.spO);
+          //
+          comm_state = COMM_COMMAND;
+          break;
+        case COMM_SP_C_L:
+          key.spC = key.comm;
+          comm_state = COMM_SP_C_R;
+          break;
+        case COMM_SP_C_R:
+          key.spC = (key.spC << 8) | key.comm;
+          MJ_UART_Write_Key(&key);
+          //
+          SERVO_Set_Close(key.spC);
           //
           comm_state = COMM_COMMAND;
           break;

@@ -6,6 +6,8 @@ typedef struct datakey_struct {
     int32_t tt;          // 4 char
     int32_t pp;          // 4 char
     uint16_t sp;         // 2 char
+    uint16_t spO;        // 2 char
+    uint16_t spC;        // 2 char
     uint16_t sw0;        // 2 char
     uint16_t sv0;        // 2 char
     uint16_t sw1;        // 2 char

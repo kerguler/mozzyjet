@@ -10,10 +10,25 @@
 
 extern volatile uint16_t WAITING;
 
+/*
+ * Cap design: Glue
+ */
+uint16_t PWM_OPEN = 1400;
+// uint16_t PWM_CLOSE = 2180;
+uint16_t PWM_CLOSE = 2250;
+
 uint16_t PWM_SIGNAL = 0;
 
 void SERVO_Init() {
     PWM_Send_Init(LAMBDA);
+}
+
+void SERVO_Set_Open(uint16_t spO) {
+  PWM_OPEN = spO;
+}
+
+void SERVO_Set_Close(uint16_t spC) {
+  PWM_CLOSE = spC;
 }
 
 void SERVO_Open() {

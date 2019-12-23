@@ -23,5 +23,9 @@
 #define COMM_PWM0_R       10
 #define COMM_PWM1_L       11
 #define COMM_PWM1_R       12
+#define COMM_SP_O_L       13
+#define COMM_SP_O_R       14
+#define COMM_SP_C_L       15
+#define COMM_SP_C_R       16
 
 #endif

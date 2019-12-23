@@ -7,6 +7,8 @@ var info = {
     tt: 0,
     pp: 0,
     sp: 0,
+    spO: 0,
+    spC: 0,
     sw: 0,
     sv: 0,
     tm: 0,
@@ -38,35 +40,39 @@ var STATE = {
     READ_pp_3: 15,
     READ_sp_0: 16,
     READ_sp_1: 17,
-    READ_sw0_0: 18,
-    READ_sw0_1: 19,
-    READ_sv0_0: 20,
-    READ_sv0_1: 21,
-    READ_sw1_0: 22,
-    READ_sw1_1: 23,
-    READ_sv1_0: 24,
-    READ_sv1_1: 25,
-    READ_tm_0: 26,
-    READ_tm_1: 27,
-    READ_p1_0: 28,
-    READ_p1_1: 29,
-    READ_p1_2: 30,
-    READ_p1_3: 31,
-    READ_p2_0: 32,
-    READ_p2_1: 33,
-    READ_p2_2: 34,
-    READ_p2_3: 35,
-    READ_lam_0: 36,
-    READ_lam_1: 37,
-    READ_pwm0_1: 38,
-    READ_pwm0_1: 39,
-    READ_pwm1_0: 40,
-    READ_pwm1_1: 41,
-    READ_v0_0: 42,
-    READ_v0_1: 43,
-    READ_spv_0: 44,
-    READ_spv_1: 45,
-    READ_COMM: 46
+    READ_spO_0: 18,
+    READ_spO_1: 19,
+    READ_spC_0: 20,
+    READ_spC_1: 21,
+    READ_sw0_0: 22,
+    READ_sw0_1: 23,
+    READ_sv0_0: 24,
+    READ_sv0_1: 25,
+    READ_sw1_0: 26,
+    READ_sw1_1: 27,
+    READ_sv1_0: 28,
+    READ_sv1_1: 29,
+    READ_tm_0: 30,
+    READ_tm_1: 31,
+    READ_p1_0: 32,
+    READ_p1_1: 33,
+    READ_p1_2: 34,
+    READ_p1_3: 35,
+    READ_p2_0: 36,
+    READ_p2_1: 37,
+    READ_p2_2: 38,
+    READ_p2_3: 39,
+    READ_lam_0: 40,
+    READ_lam_1: 41,
+    READ_pwm0_1: 42,
+    READ_pwm0_1: 43,
+    READ_pwm1_0: 44,
+    READ_pwm1_1: 45,
+    READ_v0_0: 46,
+    READ_v0_1: 47,
+    READ_spv_0: 48,
+    READ_spv_1: 49,
+    READ_COMM: 50
 }
 
 var state = STATE.START_AB;
@@ -99,6 +105,8 @@ exports.readSerialData = () => {
                 info.tt = 0;
                 info.pp = 0;
                 info.sp = 0;
+                info.spO = 0;
+                info.spC = 0;
                 info.sw0 = 0;
                 info.sv0 = 0;
                 info.sw1 = 0;
@@ -135,7 +143,11 @@ exports.readSerialData = () => {
         case STATE.READ_pp_2:  info.pp |= (c<<16); state = STATE.READ_pp_3;   break;
         case STATE.READ_pp_3:  info.pp |= (c<<24); state = STATE.READ_sp_0;   break;
         case STATE.READ_sp_0:  info.sp |= c;       state = STATE.READ_sp_1;   break;
-        case STATE.READ_sp_1:  info.sp |= (c<<8);  state = STATE.READ_sw0_0;  break;
+        case STATE.READ_sp_1:  info.sp |= (c<<8);  state = STATE.READ_spO_0;  break;
+        case STATE.READ_spO_0: info.spO |= c;      state = STATE.READ_spO_1;  break;
+        case STATE.READ_spO_1: info.spO |= (c<<8); state = STATE.READ_spC_0;  break;
+        case STATE.READ_spC_0: info.spC |= c;      state = STATE.READ_spC_1;  break;
+        case STATE.READ_spC_1: info.spC |= (c<<8); state = STATE.READ_sw0_0;  break;
         case STATE.READ_sw0_0: info.sw0 |= c;      state = STATE.READ_sw0_1;  break;
         case STATE.READ_sw0_1: info.sw0 |= (c<<8); state = STATE.READ_sv0_0;  break;
         case STATE.READ_sv0_0: info.sv0 |= c;      state = STATE.READ_sv0_1;  break;

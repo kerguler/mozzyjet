@@ -10,17 +10,12 @@
 
 #define LAMBDA (20000-1)
 
-/*
- * Cap design: Glue
- */
-#define PWM_OPEN  1400
-// #define PWM_CLOSE 2180
-#define PWM_CLOSE 2250
-
 #define ADC_CLOSE 690
 #define ADC_OPEN  470
 
 void SERVO_Init(void);
+void SERVO_Set_Open(uint16_t spO);
+void SERVO_Set_Close(uint16_t spC);
 void SERVO_Open(void);
 void SERVO_Open_ms(uint16_t ms);
 void SERVO_Open_Check(void);
