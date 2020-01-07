@@ -88,7 +88,7 @@ exports.reset = () => {
 
 exports.serial_data = (data, isNotification) => {
     for (let count=0; count<data.length; count++)
-	    buffer.push(data[count]);
+        buffer.push(data[count]);
 };
 
 exports.readSerialData = () => {

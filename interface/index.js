@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var bluetooth = false;
+var bluetooth = true;
 var diagnose = false;
 var handle = null;
 
@@ -246,7 +246,9 @@ crack.events.on('mj-log', function (data) {
 });
 
 const connectSerialPort = () => {
-    const SerialPort = require("serialport"); 
+    const SerialPort = require("serialport");
+    // const portId = "/dev/cu.uart-F7FF5184AB940D3F";
+    const portId = "/dev/cu.HC-06-SPPDev-1";
     //
     const serial_error = (error) => {
 	    console.dir(error);
@@ -254,13 +256,13 @@ const connectSerialPort = () => {
     //
     if (handle != null) {
 	    handle.close(function (err) {
-	        handle = new SerialPort("/dev/cu.uart-F7FF5184AB940D3F", { baudRate: 9600 });
+	        handle = new SerialPort(portId, { baudRate: 9600 });
 	        handle.on('error', serial_error);
 	        handle.on('open', init);
 	        logCommands("Serial connection requested...");
 	    });
     } else {
-	    handle = new SerialPort("/dev/cu.uart-F7FF5184AB940D3F", { baudRate: 9600 });
+	    handle = new SerialPort(portId, { baudRate: 9600 });
 	    handle.on('error', serial_error);
 	    handle.on('open', init);
     }
@@ -269,7 +271,7 @@ const connectSerialPort = () => {
 const setupBluetooth = () => {
     var noble = require('./noble-mac-master');
     // var peripheralIdOrAddress = '58ee3bc354e844dea7a084c930710ece';
-    var peripheralIdOrAddress = '8cbb8c069eb845de9c757340588cde73';
+    var peripheralIdOrAddress =    '2504f5f6e24440ebafd8d5eb9e71882a';
     //
     noble.on('stateChange', function(state) {
         if (state === 'poweredOn') {
@@ -289,10 +291,8 @@ const setupBluetooth = () => {
             console.log('Connected to', peripheral.id);
             //
             peripheral.discoverSomeServicesAndCharacteristics(
-                ['1811'], // serviceUUIDs,
-                ['2a46'], // characteristicUUIDs,
-                // ['FFE0'], // serviceUUIDs,
-                // ['FFE1'], // characteristicUUIDs,
+                ['FFE0'], // serviceUUIDs,
+                ['FFE1'], // characteristicUUIDs,
                 function (error, services, characteristics) {
                     console.log('Discovered services and characteristics');
                     //
@@ -318,7 +318,7 @@ const setupBluetooth = () => {
 const diagnoseBluetooth = () => {
     var noble = require('./noble-mac-master');
     // var peripheralIdOrAddress = '58ee3bc354e844dea7a084c930710ece';
-    var peripheralIdOrAddress = '8cbb8c069eb845de9c757340588cde73';
+    var peripheralIdOrAddress =    '2504f5f6e24440ebafd8d5eb9e71882a';
     //
     noble.on('stateChange', function(state) {
         if (state === 'poweredOn') {
@@ -329,7 +329,7 @@ const diagnoseBluetooth = () => {
     });
     //
     noble.on('discover', function(peripheral) {
-        console.log('Scanning:' + peripheral.id);
+        console.log('Scanning:' + peripheral.id + ' ' + peripheral.address);
         if (peripheral.id !== peripheralIdOrAddress) return;
         noble.stopScanning();
         //
@@ -340,14 +340,12 @@ const diagnoseBluetooth = () => {
             console.dir(peripheral);
             peripheral.discoverServices(null, function(error, services) {
                 console.log('discovered the following services:');
-                var i;
-                for (i in services) {
+                for (var i in services) {
                     console.log('  ' + i + ' uuid: ' + services[i].uuid);
                     services[i].discoverCharacteristics(null, function(error, characteristics) {
                         console.log('discovered the following characteristics:');
-                        var j;
-                        for (j in characteristics) {
-                            console.log(' service: ' + services[i].uuid + ' uuid: ' + characteristics[j].uuid + ' name: ' + characteristics[j].name + ' type: ' + characteristics[j].type + ' properties: ' + characteristics[j].properties);
+                        for (var j in characteristics) {
+                            console.log(' service: ' + characteristics[j]._serviceUuid + ' uuid: ' + characteristics[j].uuid + ' name: ' + characteristics[j].name + ' type: ' + characteristics[j].type + ' properties: ' + characteristics[j].properties);
                         }
                     });
                 }
